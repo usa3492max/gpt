@@ -72,6 +72,14 @@ make run TARGET=10.10.11.42
 <li>A deliberately vulnerable practice lab (<code>labs/web</code>) and <code>make demo</code> to watch the whole loop
   work without an API key.</li>
 </ul>
+<h3 id="community">Community</h3>
+<ul>
+<li><code>CONTRIBUTING.md</code> — setup, what is easy to add (a tool is one class, a provider is two
+  methods), and the changes that need tests: anything touching guardrails or the prompt.</li>
+<li><code>SECURITY.md</code> — how to report a guardrail bypass privately, plus an honest statement of what
+  the tool does and does not guarantee (the container is the boundary; it is not a sandbox).</li>
+<li><code>CODE_OF_CONDUCT.md</code>, issue templates and a pull-request template.</li>
+</ul>
 <h3 id="verification">Verification</h3>
 <ul>
 <li>226 tests pass (protocol parsing across 29 real model output formats, guardrails, every tool,

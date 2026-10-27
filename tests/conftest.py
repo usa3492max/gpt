@@ -128,6 +128,29 @@ class _LabHandler(BaseHTTPRequestHandler):
 
 
 @pytest.fixture
+def lab_server_preferred():
+    """The lab on 8080 — a port MockClient prefers when it picks a web target.
+
+    Without this the model scans loopback and may pick whatever else happens to be
+    listening (a dev server on 8090, for instance), which made the end-to-end test
+    depend on the developer's machine.
+    """
+    try:
+        httpd = ThreadingHTTPServer(("127.0.0.1", 8080), _LabHandler)
+    except OSError as exc:
+        pytest.skip(f"port 8080 unavailable for the end-to-end lab: {exc}")
+    _LabHandler.hits = []
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield "http://127.0.0.1:8080"
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        thread.join(timeout=2)
+
+
+@pytest.fixture
 def lab_server():
     port = free_port()
     _LabHandler.hits = []

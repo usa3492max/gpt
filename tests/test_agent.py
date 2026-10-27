@@ -334,16 +334,16 @@ def test_multi_flag_keeps_running(tmp_path):
 # --------------------------------------------------------------------------- #
 # e2e with the real mock model against the local lab
 # --------------------------------------------------------------------------- #
-def test_end_to_end_mock_model_against_lab(tmp_path, lab_server):
+def test_end_to_end_mock_model_against_lab(tmp_path, lab_server_preferred):
+    """The whole loop against a real HTTP server, driven by the offline mock model.
+
+    The lab listens on 8080, which is the port MockClient prefers, so the outcome
+    does not depend on what else happens to be running on the developer's loopback.
+    """
     from redloop.llm import MockClient
 
-    port = lab_server.rsplit(":", 1)[1]
-    if int(port) > 10000:
-        pytest.skip("mock port scanner covers 1-10000")
-    # The mock model scans 127.0.0.1 and prefers conventional web ports. If the
-    # machine already serves something on one of them the run would attack that
-    # instead, so this test needs a quiet loopback.
-    for busy in (80, 3000, 5000, 8000, 8080, 8443, 8888):
+    # Anything on a port the model prefers would be attacked instead of the lab.
+    for busy in (80, 3000, 5000, 8000, 8443, 8888):
         with socket.socket() as probe:
             probe.settimeout(0.05)
             if probe.connect_ex(("127.0.0.1", busy)) == 0:

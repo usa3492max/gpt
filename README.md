@@ -4,6 +4,13 @@
 hypotheses, exploits, and reports — deciding its own next step with a large language model and
 streaming its reasoning to your terminal as it goes.
 
+<p>
+  <a href="https://github.com/usa3492max/gpt/actions/workflows/ci.yml"><img alt="ci" src="https://github.com/usa3492max/gpt/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/usa3492max/gpt/releases"><img alt="release" src="https://img.shields.io/github/v/release/usa3492max/gpt?color=ff4d5e"></a>
+  <a href="LICENSE"><img alt="license: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
+  <img alt="python 3.10+" src="https://img.shields.io/badge/python-3.10%2B-blue">
+</p>
+
 [**Website**](https://usa3492max.github.io/gpt/) ·
 [Documentation](https://usa3492max.github.io/gpt/docs.html) ·
 [Architecture](https://usa3492max.github.io/gpt/architecture.html) ·
@@ -523,6 +530,23 @@ Adding a tool: subclass `Tool` in `redloop/tools/`, declare `name`, `summary`, `
 `redloop/tools/__init__.py`. The prompt, CLI help and parser aliases pick it up automatically.
 
 ---
+
+## Contributing
+
+Issues and pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for setup, what is
+easy to add (a tool is one class; a provider is two methods) and what to be careful about.
+
+`make test` and `make lint` need no Docker, no API key and no network access, so the feedback loop
+is fast.
+
+- **Found a guardrail bypass?** Do not open a public issue — follow [SECURITY.md](SECURITY.md).
+  Scope escapes, blocklist bypasses, path escapes and credential leaks are treated as urgent.
+- **Being a decent human:** [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). In short: do not use this
+  tool on systems you have not been authorised to test.
+
+The docs website in `docs/` is generated from this README and `docs/*.md` by `docs/build_site.py`
+(`make site`), so the published pages cannot drift from the source.
+
 
 ## Legal
 

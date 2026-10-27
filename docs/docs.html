@@ -26,11 +26,23 @@
 <main id="main" class="wide">
 
 <article class="prose">
-<nav class="toc" aria-label="On this page"><p class="toc-title">On this page</p><ul><li><a href="#contents">Contents</a></li><li><a href="#why-it-is-different">Why it is different</a></li><li><a href="#quick-start">Quick start</a></li><li><a href="#choosing-a-model">Choosing a model</a></li><li><a href="#command-line-reference">Command-line reference</a></li><li><a href="#watching-it-work">Watching it work</a></li><li><a href="#what-comes-out-of-a-run">What comes out of a run</a></li><li><a href="#how-it-works">How it works</a></li><li><a href="#ctf-playbook">CTF playbook</a></li><li><a href="#scope-and-safety">Scope and safety</a></li><li><a href="#troubleshooting">Troubleshooting</a></li><li><a href="#development">Development</a></li><li><a href="#legal">Legal</a></li></ul></nav>
+<nav class="toc" aria-label="On this page"><p class="toc-title">On this page</p><ul><li><a href="#contents">Contents</a></li><li><a href="#why-it-is-different">Why it is different</a></li><li><a href="#quick-start">Quick start</a></li><li><a href="#choosing-a-model">Choosing a model</a></li><li><a href="#command-line-reference">Command-line reference</a></li><li><a href="#watching-it-work">Watching it work</a></li><li><a href="#what-comes-out-of-a-run">What comes out of a run</a></li><li><a href="#how-it-works">How it works</a></li><li><a href="#ctf-playbook">CTF playbook</a></li><li><a href="#scope-and-safety">Scope and safety</a></li><li><a href="#troubleshooting">Troubleshooting</a></li><li><a href="#development">Development</a></li><li><a href="#contributing">Contributing</a></li><li><a href="#legal">Legal</a></li></ul></nav>
 <h1 id="redloop">redloop</h1>
 <p><strong>An autonomous penetration-testing agent.</strong> Point it at a target; it enumerates, forms
 hypotheses, exploits, and reports — deciding its own next step with a large language model and
 streaming its reasoning to your terminal as it goes.</p>
+<p>
+  <a href="https://github.com/usa3492max/gpt/actions/workflows/ci.yml" target="_blank" rel="noopener"><img alt="ci" src="https://github.com/usa3492max/gpt/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/usa3492max/gpt/releases" target="_blank" rel="noopener"><img alt="release" src="https://img.shields.io/github/v/release/usa3492max/gpt?color=ff4d5e"></a>
+  <a href="https://github.com/usa3492max/gpt/blob/main/LICENSE" target="_blank" rel="noopener"><img alt="license: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
+  <img alt="python 3.10+" src="https://img.shields.io/badge/python-3.10%2B-blue">
+</p>
+
+<p><a href="https://usa3492max.github.io/gpt/"><strong>Website</strong></a> ·
+<a href="https://usa3492max.github.io/gpt/docs.html">Documentation</a> ·
+<a href="https://usa3492max.github.io/gpt/architecture.html">Architecture</a> ·
+<a href="https://usa3492max.github.io/gpt/changelog.html">Changelog</a> ·
+<a href="https://github.com/usa3492max/gpt/releases/tag/v0.1.0" target="_blank" rel="noopener">Release v0.1.0 "Panther gpt"</a></p>
 <pre><code class="language-bash">make build
 cp .env.example .env          # add your ANTHROPIC_API_KEY (or use Ollama)
 make run TARGET=10.10.11.42
@@ -708,6 +720,7 @@ source .venv/bin/activate
 redloop --help
 make test                 # 226 tests, no network required
 make lint                 # ruff
+make site                 # rebuild the docs website in docs/ (GitHub Pages)
 </code></pre>
 <p>Layout:</p>
 <pre><code>redloop/
@@ -731,6 +744,19 @@ tests/                226 tests covering the parser, guardrails, tools, loop and
 <code>required</code>, implement <code>async def run(args, ctx)</code>, then register it in
 <code>redloop/tools/__init__.py</code>. The prompt, CLI help and parser aliases pick it up automatically.</p>
 <hr />
+<h2 id="contributing">Contributing</h2>
+<p>Issues and pull requests are welcome — see <a href="https://github.com/usa3492max/gpt/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md</a> for setup, what is
+easy to add (a tool is one class; a provider is two methods) and what to be careful about.</p>
+<p><code>make test</code> and <code>make lint</code> need no Docker, no API key and no network access, so the feedback loop
+is fast.</p>
+<ul>
+<li><strong>Found a guardrail bypass?</strong> Do not open a public issue — follow <a href="https://github.com/usa3492max/gpt/blob/main/SECURITY.md" target="_blank" rel="noopener">SECURITY.md</a>.
+  Scope escapes, blocklist bypasses, path escapes and credential leaks are treated as urgent.</li>
+<li><strong>Being a decent human:</strong> <a href="https://github.com/usa3492max/gpt/blob/main/CODE_OF_CONDUCT.md" target="_blank" rel="noopener">CODE_OF_CONDUCT.md</a>. In short: do not use this
+  tool on systems you have not been authorised to test.</li>
+</ul>
+<p>The docs website in <code>docs/</code> is generated from this README and <code>docs/*.md</code> by <code>docs/build_site.py</code>
+(<code>make site</code>), so the published pages cannot drift from the source.</p>
 <h2 id="legal">Legal</h2>
 <p>redloop is for authorised security testing only — systems you own, or systems you have explicit
 written permission to test. Unauthorised access to computer systems is a criminal offence in

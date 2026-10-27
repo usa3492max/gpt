@@ -233,6 +233,21 @@ def _rewrite_links(body: str) -> str:
         body,
     )
     body = body.replace(f'href="{REPO_URL}/blob/main/docs/', 'href="')
+
+    # Anything else that is relative but is not a published page (CONTRIBUTING.md,
+    # SECURITY.md, labs/, tests/, ...) is sent to the file on GitHub. This keeps the
+    # site correct without maintaining a list every time a sibling doc is added.
+    def _to_github(match: re.Match[str]) -> str:
+        url = match.group(1)
+        if url.startswith(("http://", "https://", "#", "mailto:", "data:")):
+            return match.group(0)
+        target = url.split("#")[0]
+        if not target or (DOCS / target).exists():
+            return match.group(0)
+        return f'href="{REPO_URL}/blob/main/{target}"'
+
+    body = re.sub(r'href="([^"]+)"', _to_github, body)
+
     # External links open in a new tab.
     body = re.sub(
         r'<a href="(https?://[^"]+)"',

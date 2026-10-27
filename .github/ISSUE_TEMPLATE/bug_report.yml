@@ -1,0 +1,90 @@
+name: Bug report
+description: Something in redloop behaves wrongly — a crash, a bad decision, a broken flag
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please **do not** include API keys, credentials, or another
+        party's live vulnerability details. For security problems in redloop itself, use
+        [SECURITY.md](https://github.com/usa3492max/gpt/blob/main/SECURITY.md) instead.
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `redloop --version` (and the image tag if you use Docker)
+      placeholder: "redloop 0.1.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: provider
+    attributes:
+      label: Model provider
+      options:
+        - anthropic (Claude)
+        - openai
+        - ollama (local)
+        - lmstudio (local)
+        - openrouter
+        - groq
+        - custom OpenAI-compatible endpoint
+        - mock (offline demo)
+    validations:
+      required: true
+
+  - type: input
+    id: model
+    attributes:
+      label: Model name
+      placeholder: "claude-sonnet-4-5 / qwen2.5-coder:14b"
+
+  - type: dropdown
+    id: how
+    attributes:
+      label: How are you running it?
+      options:
+        - Docker (make run)
+        - Docker (docker run directly)
+        - Native (pip install / venv)
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you expect, and what did you get instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: >-
+        The exact command, the objective if you set one, and roughly what the target was
+        (a HTB box, the bundled lab, a local VM — no need to name anything private).
+      render: bash
+      placeholder: |
+        make run TARGET=10.10.11.42 ARGS="--max-steps 30"
+        # at step 7 the agent ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant feed or transcript
+      description: >-
+        The run directory contains `feed.txt` and `transcript.jsonl`. Paste the few steps around
+        the problem — not the whole run, and redact anything sensitive.
+      render: text
+
+  - type: textarea
+    id: doctor
+    attributes:
+      label: "`redloop --doctor` output"
+      description: Useful for anything that looks like an environment or endpoint problem.
+      render: text
