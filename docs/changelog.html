@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Changelog · Panther gpt</title>
+<meta name="description" content="Release notes for Panther gpt v0.1.0.">
+<meta name="color-scheme" content="dark">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Changelog · Panther gpt">
+<meta property="og:description" content="Release notes for Panther gpt v0.1.0.">
+<meta property="og:url" content="https://usa3492max.github.io/gpt/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230c0d12'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='18' fill='%23ff4d5e' text-anchor='middle'%3E%3E%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="index.html"><span class="mark">&gt;</span> Panther <span class="thin">gpt</span></a>
+    <nav class="sitenav" aria-label="Site"><a class="" href="index.html">Overview</a><a class="" href="docs.html">Docs</a><a class="" href="architecture.html">Architecture</a><a class="active" href="changelog.html">Changelog</a>
+      <a href="https://github.com/usa3492max/gpt" target="_blank" rel="noopener">GitHub<span class="ext">↗</span></a>
+    </nav>
+  </div>
+</header>
+<main id="main" class="wide">
+
+<article class="prose">
+<nav class="toc" aria-label="On this page"><p class="toc-title">On this page</p><ul><li><a href="#v010-panther-gpt">v0.1.0 — &quot;Panther gpt&quot;</a></li><li><a href="#roadmap">Roadmap</a></li></ul></nav>
+<h1 id="changelog">Changelog</h1>
+<p>All notable changes to Panther gpt (package and CLI name: <code>redloop</code>).</p>
+<h2 id="v010-panther-gpt">v0.1.0 — "Panther gpt"</h2>
+<p><em>Released 2026-10-27</em></p>
+<p>First public release: a complete, self-contained automated penetration-testing agent.</p>
+<pre><code class="language-bash">make build &amp;&amp; cp .env.example .env     # add ANTHROPIC_API_KEY
+make run TARGET=10.10.11.42
+</code></pre>
+<h3 id="highlights">Highlights</h3>
+<ul>
+<li><strong>One action per turn.</strong> The model reasons, emits one JSON tool call, the runtime executes it
+  and returns the real observation plus a refreshed state block. No fabricated output, ever.</li>
+<li><strong>Any model.</strong> Anthropic Claude, or anything OpenAI-compatible — Ollama, LM Studio, vLLM,
+  OpenRouter, Groq. Also <code>--provider mock</code>, an offline rule-based model for demos and CI.</li>
+<li><strong>Survives its own context window.</strong> A durable scratchpad plus automatic fact extraction
+  (ports/versions, URLs, credentials, hashes, HTML comments) feeds every prompt, so long runs
+  don't collapse into amnesiac loops. Compaction is deterministic and costs no API calls.</li>
+<li><strong>Live feed.</strong> Rich terminal view with thinking panels, per-action spinner, findings and a
+  flag banner; <code>--plain</code> for logs/CI; <code>--json-feed</code> for piping into your own tooling.</li>
+<li><strong>Reports, not logs.</strong> Every run writes <code>report.md</code>, <code>results.json</code>, <code>transcript.jsonl</code>,
+  <code>feed.txt</code>, <code>memory.json</code> and captures full output in <code>loot/</code>.</li>
+<li><strong>CTF-ready toolchain.</strong> Kali image with nmap, gobuster/ffuf, sqlmap, hydra, netcat, binwalk,
+  exiftool, gdb/radare2, wordlists and Python libs (pwntools, z3, sympy, pycryptodome). The
+  system prompt carries per-category tradecraft: web, pwn, crypto, forensics, reversing, privesc.</li>
+</ul>
+<h3 id="guardrails">Guardrails</h3>
+<ul>
+<li>Authorisation gate — non-loopback targets require <code>--i-am-authorized</code>.</li>
+<li>Scope enforcement on every IP, URL, host flag, positional host <strong>and</strong> Python snippet, with
+  private ranges allowed (CTF pivots) and public off-scope hosts refused with the exact <code>--scope</code>
+  needed. Refusals go back to the model so it adapts.</li>
+<li>Blast-radius blocklist: <code>mkfs</code>, <code>dd of=/dev/sd*</code>, <code>rm -rf /</code>, fork bombs, shutdown.</li>
+<li>Hard limits: per-command timeouts, 2 MB output cap, step/time/cost budgets, repeat suppression,
+  and a stop after 8 unproductive actions.</li>
+</ul>
+<h3 id="adding">Adding</h3>
+<ul>
+<li>Ten tools: <code>shell</code>, <code>python</code>, <code>http</code>, <code>read_file</code>, <code>write_file</code>, <code>list_dir</code>, <code>note_add</code>,
+  <code>record_finding</code>, <code>submit_flag</code>, <code>give_up</code>.</li>
+<li>Provider clients for the Anthropic Messages API (with prompt caching) and any
+  OpenAI-compatible <code>/v1/chat/completions</code> endpoint, plus a retry wrapper with backoff and an
+  error taxonomy the loop can react to.</li>
+<li>A deliberately vulnerable practice lab (<code>labs/web</code>) and <code>make demo</code> to watch the whole loop
+  work without an API key.</li>
+</ul>
+<h3 id="verification">Verification</h3>
+<ul>
+<li>226 tests pass (protocol parsing across 29 real model output formats, guardrails, every tool,
+  both provider wire protocols via mocked HTTP, the agent loop, rendering, CLI).</li>
+<li>End-to-end: the agent autonomously solves the bundled lab — port discovery → SQL injection
+  bypass → flag — through the real tool and report pipeline.</li>
+<li><code>ruff</code> clean; wheel verified in a clean virtualenv.</li>
+</ul>
+<h3 id="known-gaps">Known gaps</h3>
+<ul>
+<li>The Docker image build was not executed in the development sandbox (no daemon available), so
+  <code>make build</code> is the first thing to try on your machine.</li>
+<li>Only the web category has been empirically validated. Pwn/crypto/forensics support is real
+  (tools in the image, tradecraft in the prompt) but unproven until pointed at a challenge.</li>
+<li>Prebuilt wheels are not attached to the GitHub release because binary uploads are blocked in
+  the environment the release was cut from; <code>python -m build</code> reproduces the identical wheel.</li>
+</ul>
+<hr />
+<h2 id="roadmap">Roadmap</h2>
+<ul>
+<li>Web dashboard for watching runs in a browser (local only, token-gated).</li>
+<li>Pivot support: consider discovered internal hosts as first-class scope.</li>
+<li>Metasploit and impacket integration behind an opt-in flag.</li>
+<li>Recorded run replay from <code>transcript.jsonl</code>.</li>
+</ul>
+</article>
+
+</main>
+<footer class="footer">
+  <p>Generated from the repository's own markdown — it cannot drift from the source.</p>
+  <p class="muted">
+    v0.1.0 · MIT licensed ·
+    <a href="https://github.com/usa3492max/gpt" target="_blank" rel="noopener">source</a> ·
+    <a href="https://github.com/usa3492max/gpt/releases/tag/v0.1.0" target="_blank" rel="noopener">release</a> ·
+    <a href="changelog.html">changelog</a>
+  </p>
+  <p class="disclaimer">
+    For authorised security testing only: systems you own, or systems you have explicit written
+    permission to test. Unauthorised access to computer systems is a criminal offence in most
+    jurisdictions. You are responsible for what you point it at.
+  </p>
+</footer>
+</body>
+</html>

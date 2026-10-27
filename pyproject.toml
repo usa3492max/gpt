@@ -19,6 +19,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.4"]
+docs = ["markdown>=3.5"]
 
 [project.scripts]
 redloop = "redloop.cli:main"

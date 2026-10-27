@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Architecture · Panther gpt</title>
+<meta name="description" content="How the loop, action protocol, guardrails, memory and compaction fit together.">
+<meta name="color-scheme" content="dark">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Architecture · Panther gpt">
+<meta property="og:description" content="How the loop, action protocol, guardrails, memory and compaction fit together.">
+<meta property="og:url" content="https://usa3492max.github.io/gpt/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230c0d12'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='18' fill='%23ff4d5e' text-anchor='middle'%3E%3E%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="index.html"><span class="mark">&gt;</span> Panther <span class="thin">gpt</span></a>
+    <nav class="sitenav" aria-label="Site"><a class="" href="index.html">Overview</a><a class="" href="docs.html">Docs</a><a class="active" href="architecture.html">Architecture</a><a class="" href="changelog.html">Changelog</a>
+      <a href="https://github.com/usa3492max/gpt" target="_blank" rel="noopener">GitHub<span class="ext">↗</span></a>
+    </nav>
+  </div>
+</header>
+<main id="main" class="wide">
+
+<article class="prose">
+<nav class="toc" aria-label="On this page"><p class="toc-title">On this page</p><ul><li><a href="#design-constraints">Design constraints</a></li><li><a href="#module-map">Module map</a></li><li><a href="#the-loop-precisely">The loop, precisely</a></li><li><a href="#the-action-protocol">The action protocol</a></li><li><a href="#guardrails">Guardrails</a></li><li><a href="#memory-and-compaction">Memory and compaction</a></li><li><a href="#rendering">Rendering</a></li><li><a href="#providers">Providers</a></li><li><a href="#failure-handling">Failure handling</a></li><li><a href="#testing-strategy">Testing strategy</a></li><li><a href="#extending">Extending</a></li></ul></nav>
+<h1 id="architecture">Architecture</h1>
+<p>This document explains how redloop is put together, why the pieces are separated the way they
+are, and what to change when you extend it.</p>
+<h2 id="design-constraints">Design constraints</h2>
+<ol>
+<li><strong>The model is unreliable.</strong> Any protocol that assumes well-formed output will fail on the
+   first local model you try. Parsing must be forgiving, and the loop must recover from a bad
+   turn without losing the run.</li>
+<li><strong>The context window is finite.</strong> A 40-step run produces far more text than any model can
+   hold. State has to live outside the conversation.</li>
+<li><strong>Autonomy means unattended failure.</strong> A run may last an hour with nobody watching, so
+   limits, loop detection and guardrails must be structural rather than best-effort.</li>
+<li><strong>One action per turn.</strong> Multiple actions per turn make the transcript unreadable, break
+   guardrail accounting and frustrate plan-level reasoning.</li>
+</ol>
+<h2 id="module-map">Module map</h2>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Responsibility</th>
+<th>Depends on</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cli.py</code></td>
+<td>Parse args, build config, wire bus/renderer/transcript/client/agent, exit codes</td>
+<td>everything</td>
+</tr>
+<tr>
+<td><code>config.py</code></td>
+<td>Dataclass config, provider presets, env overlay, validation, pricing</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>events.py</code></td>
+<td>Synchronous fan-out bus and the <code>Event</code> type</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>agent.py</code></td>
+<td>The loop: limits, model call, parse, execute, learn, compact, finalise</td>
+<td>protocol, prompts, tools, safety, memory, report</td>
+</tr>
+<tr>
+<td><code>protocol.py</code></td>
+<td><code>parse_action</code>: model reply → <code>Action</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>prompts.py</code></td>
+<td>System prompt, brief, state block, observation/nudge formatting</td>
+<td>tools (help text)</td>
+</tr>
+<tr>
+<td><code>context.py</code></td>
+<td>Token estimation, alternation repair, deterministic compaction</td>
+<td>prompts</td>
+</tr>
+<tr>
+<td><code>memory.py</code></td>
+<td>Notes/findings/flags, fact extraction, digests, persistence</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>safety.py</code></td>
+<td><code>ScopeGuard</code>: host extraction/authorisation, destructive-command blocklist</td>
+<td>config</td>
+</tr>
+<tr>
+<td><code>tools/</code></td>
+<td>Ten tools plus the sandboxed process runner</td>
+<td>safety, memory</td>
+</tr>
+<tr>
+<td><code>llm/</code></td>
+<td>Provider clients, retry wrapper, offline mock</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>render.py</code></td>
+<td>Rich / plain / JSON views of the event stream</td>
+<td>events, tools</td>
+</tr>
+<tr>
+<td><code>report.py</code>, <code>transcript.py</code></td>
+<td>Durable artefacts</td>
+<td>memory, config</td>
+</tr>
+<tr>
+<td><code>doctor.py</code></td>
+<td>Pre-flight checks</td>
+<td>config, llm</td>
+</tr>
+</tbody>
+</table>
+<p>The dependency rule is: <strong>the agent never prints and the renderer never executes.</strong> Everything
+crosses the boundary as an event, which is why the same run can be drawn richly, logged plainly,
+streamed as JSON, or driven headlessly in tests.</p>
+<h2 id="the-loop-precisely">The loop, precisely</h2>
+<pre><code>for step in 1..max_steps:
+    stop if: stop requested | flag captured (and stop_on_flag) |
+             time budget spent | cost budget spent | 8 unproductive actions
+    state     = state_block(facts, findings, notes, stuck counter, clock)
+    messages  = compact(messages, budget = token_budget - len(state))
+    request   = alternating(messages + [state])
+    reply     = client.complete(system_prompt, request)      # retries, backoff
+    parsed    = parse_action(reply)
+    if not parsed:      append nudge; continue
+    if unknown tool:    append tool list; continue
+    if seen twice:      append &quot;you already did this&quot;; continue
+    result    = tool.execute(args)                            # guardrails inside
+    scrape facts and flags from result.output
+    append observation to messages
+    if tool signalled flag/give_up: break
+</code></pre>
+<p>Three properties matter here.</p>
+<p><strong>The system prompt is static.</strong> No step counter, no clock, no target-specific text. Everything
+volatile rides on the final user message. This is what makes provider-side prompt caching work:
+the cached prefix is identical on every turn of a run.</p>
+<p><strong>History is append-only between compactions.</strong> Only observations and replies are stored.
+Fresh state is generated per call and <em>not</em> stored, so the transcript stays small and the model
+always sees current facts rather than a stale copy.</p>
+<p><strong>Refusals are inputs.</strong> A blocked action returns a <code>ToolResult</code> with a readable reason, which
+becomes the observation. The model is expected to change plan; the repeat detector makes
+retrying pointless anyway.</p>
+<h2 id="the-action-protocol">The action protocol</h2>
+<p>The model is asked for prose followed by exactly one fenced JSON block:</p>
+<pre><code>The login form echoes my quote, so it is probably injectable.
+
+```json
+{&quot;tool&quot;: &quot;shell&quot;, &quot;args&quot;: {&quot;command&quot;: &quot;sqlmap -u http://10.0.0.5/login.php --data 'u=1' --batch&quot;}}
+```
+</code></pre>
+<p><code>parse_action</code> accepts, in order of preference and taking the <em>last</em> valid one:</p>
+<ol>
+<li>Fenced blocks tagged <code>json</code>, <code>yaml</code>, <code>tool</code>, <code>action</code>, or untagged.</li>
+<li><code>&lt;action&gt;…&lt;/action&gt;</code>, <code>&lt;tool_call&gt;…&lt;/tool_call&gt;</code>, <code>&lt;json&gt;…&lt;/json&gt;</code> tags.</li>
+<li>Bare JSON objects anywhere in the text (balanced-brace scan that respects string literals).</li>
+<li>Python dict literals (<code>ast.literal_eval</code>), then a repair pass for trailing commas and
+   single quotes.</li>
+<li>A trailing fenced <code>bash</code> block as <code>{"tool": "shell"}</code> — only if it ends the message.</li>
+</ol>
+<p>Argument handling is equally forgiving: <code>args</code> / <code>arguments</code> / <code>input</code> / <code>parameters</code> (object or
+JSON string), flat shorthand (<code>{"tool":"shell","command":"ls"}</code>), nested function objects
+(<code>{"tool":{"name":"shell","args":{…}}}</code>), tool aliases (<code>bash</code>, <code>sh</code>, <code>curl</code>, <code>finish</code>,
+<code>done</code>…), namespaced names (<code>functions.shell</code>) and case/spacing noise.</p>
+<p>Two terminal behaviours are normalised: <code>finish</code>/<code>done</code> with a flag becomes <code>submit_flag</code>, and
+without one becomes <code>give_up</code>. Models treat "I'm done" and "here is the answer" interchangeably
+and the protocol should not lose the flag because of it.</p>
+<p>Every failure mode produces a specific nudge listing the real tool names and the expected
+format — the parser's error text is part of the prompt.</p>
+<h2 id="guardrails">Guardrails</h2>
+<p><code>ScopeGuard</code> has two independent jobs.</p>
+<p><strong>Authorisation.</strong> Build a candidate set of destinations from a command line:</p>
+<ul>
+<li>dotted-quad literals (with optional CIDR) anywhere;</li>
+<li>URLs (any scheme);</li>
+<li><code>user@host</code> forms;</li>
+<li><code>host:port</code> forms;</li>
+<li>values of destination flags (<code>--url</code>, <code>--host</code>, <code>--target</code>, <code>-u</code>, <code>-h</code> for nikto/whatweb);</li>
+<li>positional arguments, but only for a narrow list of tools where a bare positional really is
+  a host (nmap, masscan, nc, ssh, smbclient, …). Flags known to take non-host values
+  (<code>hydra -l admin</code>, <code>-P pass.txt</code>) are skipped so usernames and wordlists are not mistaken for
+  targets.</li>
+</ul>
+<p>Each candidate is then authorised: explicit target or <code>--scope</code> entry (including CIDR and
+<code>*.wildcard</code>), loopback, private range, or infrastructure host (the model API, package mirrors)
+pass. Anything else public is refused with the exact <code>--scope</code> invocation that would allow it.
+Hostnames are resolved (2s budget, cached) and re-checked by address.</p>
+<p>Python snippets get the same treatment on IPs and URLs, because a snippet can open its own
+sockets. This is a heuristic, not a sandbox; the container is the sandbox.</p>
+<p><strong>Blast radius.</strong> A blocklist of catastrophic patterns (<code>mkfs</code>, <code>dd of=/dev/sd*</code>, <code>rm -rf /</code>,
+system-directory wipes, fork bombs, shutdown/reboot, deleting the agent's own install). None of
+these are ever needed to solve a challenge; they are almost always a hallucination or a prompt
+injection succeeding.</p>
+<p>Risky-but-legitimate patterns (reverse shells, hydra, sqlmap, <code>curl | sh</code>) are recorded so a
+human reviewing the feed can see them; they are allowed because they are the job.</p>
+<h2 id="memory-and-compaction">Memory and compaction</h2>
+<p><code>Memory</code> holds notes, findings, flags, attempts, and a <code>FactStore</code>. The fact extractor runs on
+every observation and picks out:</p>
+<ul>
+<li>open ports with service and version strings (including nmap's column layout);</li>
+<li>URLs, hostnames, emails, hashes;</li>
+<li>credentials in <code>user: pass</code> and <code>user = admin password = x</code> shapes;</li>
+<li>HTML comments (where CTF hints live);</li>
+<li>software versions, which are the input to CVE reasoning.</li>
+</ul>
+<p>The digest of that store — not the transcript — is the agent's long-term memory. It is injected
+into every state block, so a model that has forgotten everything still knows what has been
+found, and it is the source of the report's "attack surface" section.</p>
+<p>Compaction triggers at 55% of <code>context_window</code> (configurable). It keeps the brief, replaces the
+middle with a deterministic summary (flags, facts, findings, notes, recent actions), keeps the
+last few exchanges, then repairs role alternation. If the result still does not fit, the tail
+shrinks; as a last resort only the brief and summary remain. A model call is never spent on
+summarising, so compaction cannot fail or cost money.</p>
+<h2 id="rendering">Rendering</h2>
+<p><code>EventBus</code> is synchronous and swallows listener exceptions (they are recorded in <code>bus.errors</code>),
+so a broken renderer cannot break a run. Renderers:</p>
+<ul>
+<li><code>RichRenderer</code> — panels, rules, a spinner started on <code>action</code> and stopped on the next event,
+  hidden when not a TTY or when <code>--quiet</code>.</li>
+<li><code>PlainRenderer</code> — timestamped lines; also used to write <code>feed.txt</code>.</li>
+<li><code>JsonRenderer</code> — one object per event for <code>jq</code> and dashboards.</li>
+</ul>
+<p>Because <code>Transcript</code> subscribes a <code>PlainRenderer</code> writing to a file, the on-disk feed is
+guaranteed to be exactly what a terminal would have shown.</p>
+<h2 id="providers">Providers</h2>
+<p><code>LLMClient</code> is a two-method interface (<code>complete</code>, <code>aclose</code>). <code>AnthropicClient</code> speaks
+<code>/v1/messages</code> with <code>cache_control</code> on the system prompt and converts native <code>tool_use</code> blocks
+into the JSON protocol. <code>OpenAIClient</code> speaks <code>/v1/chat/completions</code> and covers OpenAI, Ollama,
+LM Studio, vLLM, OpenRouter and Groq; it handles reasoning models (<code>max_completion_tokens</code>, no
+temperature), SSE responses from local servers that stream anyway, and <code>tool_calls</code>.</p>
+<p>HTTP status codes are mapped onto a small taxonomy — auth, rate limit (with <code>Retry-After</code>),
+context overflow, server error, bad request — which the retry wrapper understands and the agent
+reacts to. Context overflow is not fatal: the agent compacts harder and retries.</p>
+<p><code>MockClient</code> is a rule-based reader of its own observations. It exists so the whole system can be
+demonstrated and tested without a model, and it exercises the same code paths as a real one: it
+adapts when <code>nmap</code> is missing, follows links it finds, and submits flags it sees.</p>
+<h2 id="failure-handling">Failure handling</h2>
+<table>
+<thead>
+<tr>
+<th>Failure</th>
+<th>Response</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Malformed reply</td>
+<td>Nudge with format + tool list, continue (no step lost)</td>
+</tr>
+<tr>
+<td>Unknown tool</td>
+<td>Return available tools, continue</td>
+</tr>
+<tr>
+<td>Tool raises</td>
+<td>Caught, reported as a failed observation; the run continues</td>
+</tr>
+<tr>
+<td>Command timeout</td>
+<td>Process group killed, output returned with a note</td>
+</tr>
+<tr>
+<td>Output flood</td>
+<td>Capture capped at 2 MB, head+tail shown, full copy in <code>loot/</code></td>
+</tr>
+<tr>
+<td>Model auth error</td>
+<td>Stop with <code>status=error</code>, report still written</td>
+</tr>
+<tr>
+<td>Model rate limit / 5xx</td>
+<td>Exponential backoff with jitter, up to 5 attempts</td>
+</tr>
+<tr>
+<td>Context overflow</td>
+<td>Compact with a smaller budget, retry once</td>
+</tr>
+<tr>
+<td>Ctrl-C</td>
+<td>Cancel, finalise, write report, exit 130</td>
+</tr>
+<tr>
+<td>Repeated action</td>
+<td>Suppressed with an explanation</td>
+</tr>
+<tr>
+<td>Unproductive streak (8)</td>
+<td>Stop as <code>exhausted</code> to protect the budget</td>
+</tr>
+</tbody>
+</table>
+<h2 id="testing-strategy">Testing strategy</h2>
+<p>226 tests, no network required:</p>
+<ul>
+<li><code>test_protocol.py</code> — 29 formats real models emit (fences, tags, dicts, aliases, shorthands).</li>
+<li><code>test_safety.py</code> — scope decisions including wildcards, CIDRs, DNS names, flag-value
+  false positives; destructive blocklist; host extraction from realistic command lines.</li>
+<li><code>test_tools.py</code> — execution, timeouts, truncation, file confinement, HTTP against a local
+  server, dry-run.</li>
+<li><code>test_llm.py</code> — both providers via <code>httpx.MockTransport</code>, error mapping, retry semantics,
+  SSE, the mock model.</li>
+<li><code>test_agent.py</code> — recovery from bad replies, guardrail blocks, repeat suppression, all four
+  budget types, compaction, reporting, and an end-to-end run against a local lab.</li>
+<li><code>test_cli.py</code> — argument handling, the authorisation gate, exit codes, JSON feed, resume,
+  interrupt handling.</li>
+</ul>
+<p>Adding a provider means implementing two methods and registering a preset; adding a tool means
+one class plus one registry line.</p>
+<h2 id="extending">Extending</h2>
+<p><strong>New tool.</strong> Subclass <code>Tool</code>, set <code>name</code>, <code>summary</code>, <code>args</code>, <code>required</code>, implement
+<code>async def run(self, args, ctx) -&gt; ToolResult</code>. Register in <code>redloop/tools/__init__.py</code>. The
+system prompt, <code>--list-tools</code>, and the parser's aliases update automatically.</p>
+<p><strong>New provider.</strong> Implement <code>LLMClient.complete</code>, map HTTP errors onto the taxonomy in
+<code>llm/base.py</code>, add a <code>ProviderPreset</code> to <code>config.PRESETS</code>, and choose a branch in
+<code>llm.build_client</code>.</p>
+<p><strong>New renderer.</strong> Subscribe a callable taking <code>Event</code> to the bus. That is all.</p>
+<p><strong>Different objective.</strong> <code>--objective</code> is free text injected into the brief; the loop does not
+assume a flag. For assessments, leave it empty and the agent works towards a credible report
+with findings.</p>
+</article>
+
+</main>
+<footer class="footer">
+  <p>Generated from the repository's own markdown — it cannot drift from the source.</p>
+  <p class="muted">
+    v0.1.0 · MIT licensed ·
+    <a href="https://github.com/usa3492max/gpt" target="_blank" rel="noopener">source</a> ·
+    <a href="https://github.com/usa3492max/gpt/releases/tag/v0.1.0" target="_blank" rel="noopener">release</a> ·
+    <a href="changelog.html">changelog</a>
+  </p>
+  <p class="disclaimer">
+    For authorised security testing only: systems you own, or systems you have explicit written
+    permission to test. Unauthorised access to computer systems is a criminal offence in most
+    jurisdictions. You are responsible for what you point it at.
+  </p>
+</footer>
+</body>
+</html>

@@ -31,7 +31,7 @@ DOCKER_RUN  = docker run --rm -it \
 
 .DEFAULT_GOAL := help
 .PHONY: help build install rebuild check-target check-env check-docker run shell demo lab lab-stop doctor test lint \
-        format local-install venv ollama-pull logs clean runs version
+        format local-install venv ollama-pull logs clean runs version site preview-site
 
 # --------------------------------------------------------------------------- #
 # help
@@ -185,6 +185,20 @@ format: ## Auto-format and fix lint issues
 	@if [ -x ./.venv/bin/ruff ]; then ./.venv/bin/ruff check --fix redloop tests; \
 	else echo "ruff is not installed; run: make venv"; fi
 
+site: ## Rebuild the documentation site in docs/ (GitHub Pages)
+	@if [ -x ./.venv/bin/python ]; then \
+		./.venv/bin/python -c "import markdown" 2>/dev/null || ./.venv/bin/pip install -q "markdown>=3.5"; \
+		./.venv/bin/python docs/build_site.py; \
+	else \
+		echo "needs a local venv with the docs extra: make venv && ./.venv/bin/pip install -e '.[docs]'"; \
+		exit 1; \
+	fi
+	@echo "preview: python3 -m http.server 8090 --directory docs"
+
+preview-site: ## Serve the generated site locally on :8090
+	@echo "serving http://localhost:8090"
+	python3 -m http.server 8090 --directory docs
+
 version: ## Print the version
 	@python3 -c "import re;print(re.search(r'version = \"([^\"]+)\"', open('pyproject.toml').read()).group(1))" 2>/dev/null || echo "unknown"
 
@@ -193,4 +207,4 @@ clean: ## Remove run artefacts
 	@echo "cleaned runs/ and loot/"
 
 .PHONY: help build install rebuild check-target check-env check-docker run shell demo lab lab-stop doctor test lint \
-        format local-install venv ollama-pull logs clean runs version
+        format local-install venv ollama-pull logs clean runs version site preview-site

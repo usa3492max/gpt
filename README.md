@@ -4,6 +4,12 @@
 hypotheses, exploits, and reports — deciding its own next step with a large language model and
 streaming its reasoning to your terminal as it goes.
 
+[**Website**](https://usa3492max.github.io/gpt/) ·
+[Documentation](https://usa3492max.github.io/gpt/docs.html) ·
+[Architecture](https://usa3492max.github.io/gpt/architecture.html) ·
+[Changelog](https://usa3492max.github.io/gpt/changelog.html) ·
+[Release v0.1.0 "Panther gpt"](https://github.com/usa3492max/gpt/releases/tag/v0.1.0)
+
 ```bash
 make build
 cp .env.example .env          # add your ANTHROPIC_API_KEY (or use Ollama)
@@ -488,6 +494,7 @@ source .venv/bin/activate
 redloop --help
 make test                 # 226 tests, no network required
 make lint                 # ruff
+make site                 # rebuild the docs website in docs/ (GitHub Pages)
 ```
 
 Layout:
