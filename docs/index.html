@@ -9,7 +9,7 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="Autonomous pentest agent · Panther gpt">
 <meta property="og:description" content="Panther gpt — an LLM-driven autonomous penetration-testing agent. Enumerates, exploits and reports on its own, with a live terminal feed, scope guardrails and support for Claude or local models.">
-<meta property="og:url" content="https://usa3492max.github.io/gpt/">
+<meta property="og:url" content="https://panther-gpt.vercel.app/">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230c0d12'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='18' fill='%23ff4d5e' text-anchor='middle'%3E%3E%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="assets/style.css">
 </head>
@@ -77,7 +77,7 @@
 │ set-cookie: role=admin; Path=/                                           │
 │ ----- BODY -----                                                         │
 │ &lt;h1&gt;Admin panel&lt;/h1&gt; Welcome back, administrator.                        │
-│ Flag: &lt;code&gt;flag{r3dl00p_l4b_sql1_byp4ss}&lt;/code&gt;                         │
+│ Flag: flag{r3dl00p_l4b_sql1_byp4ss}                                      │
 ╰──────────────────────────────────────────────────────────────────────────╯</pre>
   </div>
   <p class="caption">
@@ -113,7 +113,7 @@
   <div class="table-scroll">
     <table class="models">
       <thead><tr><th>Provider</th><th>Flag</th><th>Default model</th><th>Notes</th></tr></thead>
-      <tbody><tr><td>Anthropic</td><td><code>`-p anthropic`</code></td><td><code>claude-sonnet-4-5</code></td><td>Recommended. Prompt caching on long runs.</td></tr><tr><td>OpenAI</td><td><code>`-p openai`</code></td><td><code>gpt-4.1</code></td><td>Any chat-completions model.</td></tr><tr><td>Ollama</td><td><code>`-p ollama`</code></td><td><code>qwen2.5-coder:14b</code></td><td>Local, no API cost.</td></tr><tr><td>LM Studio</td><td><code>`-p lmstudio`</code></td><td><code>local-model</code></td><td>Desktop local server.</td></tr><tr><td>OpenRouter</td><td><code>`-p openrouter`</code></td><td><code>anthropic/claude-sonnet-4.5</code></td><td>Many models, one key.</td></tr><tr><td>Groq</td><td><code>`-p groq`</code></td><td><code>llama-3.3-70b-versatile</code></td><td>Fast hosted inference.</td></tr><tr><td>Anything else</td><td><code>`-p custom --base-url`</code></td><td><code>your model</code></td><td>Any /v1/chat/completions endpoint.</td></tr><tr><td>Offline demo</td><td><code>`-p mock`</code></td><td><code>mock-rulebased</code></td><td>No key, no GPU. Exercises the loop.</td></tr></tbody>
+      <tbody><tr><td>Anthropic</td><td><code>-p anthropic</code></td><td><code>claude-sonnet-4-5</code></td><td>Recommended. Prompt caching on long runs.</td></tr><tr><td>OpenAI</td><td><code>-p openai</code></td><td><code>gpt-4.1</code></td><td>Any chat-completions model.</td></tr><tr><td>Ollama</td><td><code>-p ollama</code></td><td><code>qwen2.5-coder:14b</code></td><td>Local, no API cost.</td></tr><tr><td>LM Studio</td><td><code>-p lmstudio</code></td><td><code>local-model</code></td><td>Desktop local server.</td></tr><tr><td>OpenRouter</td><td><code>-p openrouter</code></td><td><code>anthropic/claude-sonnet-4.5</code></td><td>Many models, one key.</td></tr><tr><td>Groq</td><td><code>-p groq</code></td><td><code>llama-3.3-70b-versatile</code></td><td>Fast hosted inference.</td></tr><tr><td>Anything else</td><td><code>-p custom --base-url</code></td><td><code>your model</code></td><td>Any /v1/chat/completions endpoint.</td></tr><tr><td>Offline demo</td><td><code>-p mock</code></td><td><code>mock-rulebased</code></td><td>No key, no GPU. Exercises the loop.</td></tr></tbody>
     </table>
   </div>
   <p class="muted">

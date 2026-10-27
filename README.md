@@ -11,10 +11,10 @@ streaming its reasoning to your terminal as it goes.
   <img alt="python 3.10+" src="https://img.shields.io/badge/python-3.10%2B-blue">
 </p>
 
-[**Website**](https://usa3492max.github.io/gpt/) ·
-[Documentation](https://usa3492max.github.io/gpt/docs.html) ·
-[Architecture](https://usa3492max.github.io/gpt/architecture.html) ·
-[Changelog](https://usa3492max.github.io/gpt/changelog.html) ·
+[**Website**](https://panther-gpt.vercel.app/) ·
+[Documentation](https://panther-gpt.vercel.app/docs.html) ·
+[Architecture](https://panther-gpt.vercel.app/architecture.html) ·
+[Changelog](https://panther-gpt.vercel.app/changelog.html) ·
 [Release v0.1.0 "Panther gpt"](https://github.com/usa3492max/gpt/releases/tag/v0.1.0)
 
 ```bash

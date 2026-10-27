@@ -68,3 +68,24 @@ public issue — follow [SECURITY.md](SECURITY.md).
 ## Licence
 
 Contributions are accepted under the MIT licence, the same terms as the project.
+
+## The website
+
+The public site is `docs/` — plain static HTML, no framework and no build step at request time.
+`docs/build_site.py` generates it from `README.md` and `docs/*.md`, so **edit the markdown, never the
+HTML**:
+
+```bash
+make site          # regenerate docs/*.html from the markdown sources
+make preview-site  # serve it locally at http://localhost:8090
+```
+
+Regenerating rewrites the tracked HTML, so commit the generated files together with the markdown
+change — CI and reviewers then see exactly what will be published.
+
+The site is hosted on Vercel as the project `panther-gpt`, served from the `docs/` output
+directory: <https://panther-gpt.vercel.app/>. Deploys are created from `main`; if your change only
+touches the site, ask for a redeploy after the merge rather than pushing an empty commit.
+
+GitHub Pages (`.github/workflows/pages.yml`) remains as a fallback target and needs no
+maintenance unless you switch back to it.
