@@ -1,0 +1,60 @@
+name: pages
+
+# Publishes the documentation site in docs/ to GitHub Pages.
+#
+# The site is generated from the repository's markdown, so this workflow only has
+# to upload what is already committed. `enablement: true` lets the workflow turn
+# Pages on for the repository if it is not enabled yet, which means no manual
+# settings change is required.
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "docs/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: build site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Check the site source is present
+        run: |
+          test -f docs/index.html || { echo "docs/index.html is missing — run 'make site'"; exit 1; }
+          test -f docs/assets/style.css || { echo "docs/assets/style.css is missing"; exit 1; }
+          echo "pages:"; find docs -type f | sort
+
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+  deploy:
+    name: deploy
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
