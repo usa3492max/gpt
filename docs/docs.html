@@ -1,0 +1,784 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Documentation · Panther gpt</title>
+<meta name="description" content="Install, configure and run Panther gpt — providers, flags, guardrails and troubleshooting.">
+<meta name="color-scheme" content="dark">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Documentation · Panther gpt">
+<meta property="og:description" content="Install, configure and run Panther gpt — providers, flags, guardrails and troubleshooting.">
+<meta property="og:url" content="https://usa3492max.github.io/gpt/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230c0d12'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='18' fill='%23ff4d5e' text-anchor='middle'%3E%3E%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="index.html"><span class="mark">&gt;</span> Panther <span class="thin">gpt</span></a>
+    <nav class="sitenav" aria-label="Site"><a class="" href="index.html">Overview</a><a class="active" href="docs.html">Docs</a><a class="" href="architecture.html">Architecture</a><a class="" href="changelog.html">Changelog</a>
+      <a href="https://github.com/usa3492max/gpt" target="_blank" rel="noopener">GitHub<span class="ext">↗</span></a>
+    </nav>
+  </div>
+</header>
+<main id="main" class="wide">
+
+<article class="prose">
+<nav class="toc" aria-label="On this page"><p class="toc-title">On this page</p><ul><li><a href="#contents">Contents</a></li><li><a href="#why-it-is-different">Why it is different</a></li><li><a href="#quick-start">Quick start</a></li><li><a href="#choosing-a-model">Choosing a model</a></li><li><a href="#command-line-reference">Command-line reference</a></li><li><a href="#watching-it-work">Watching it work</a></li><li><a href="#what-comes-out-of-a-run">What comes out of a run</a></li><li><a href="#how-it-works">How it works</a></li><li><a href="#ctf-playbook">CTF playbook</a></li><li><a href="#scope-and-safety">Scope and safety</a></li><li><a href="#troubleshooting">Troubleshooting</a></li><li><a href="#development">Development</a></li><li><a href="#contributing">Contributing</a></li><li><a href="#legal">Legal</a></li></ul></nav>
+<h1 id="redloop">redloop</h1>
+<p><strong>An autonomous penetration-testing agent.</strong> Point it at a target; it enumerates, forms
+hypotheses, exploits, and reports — deciding its own next step with a large language model and
+streaming its reasoning to your terminal as it goes.</p>
+<p>
+  <a href="https://github.com/usa3492max/gpt/actions/workflows/ci.yml" target="_blank" rel="noopener"><img alt="ci" src="https://github.com/usa3492max/gpt/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/usa3492max/gpt/releases" target="_blank" rel="noopener"><img alt="release" src="https://img.shields.io/github/v/release/usa3492max/gpt?color=ff4d5e"></a>
+  <a href="https://github.com/usa3492max/gpt/blob/main/LICENSE" target="_blank" rel="noopener"><img alt="license: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
+  <img alt="python 3.10+" src="https://img.shields.io/badge/python-3.10%2B-blue">
+</p>
+
+<p><a href="https://usa3492max.github.io/gpt/"><strong>Website</strong></a> ·
+<a href="https://usa3492max.github.io/gpt/docs.html">Documentation</a> ·
+<a href="https://usa3492max.github.io/gpt/architecture.html">Architecture</a> ·
+<a href="https://usa3492max.github.io/gpt/changelog.html">Changelog</a> ·
+<a href="https://github.com/usa3492max/gpt/releases/tag/v0.1.0" target="_blank" rel="noopener">Release v0.1.0 "Panther gpt"</a></p>
+<pre><code class="language-bash">make build
+cp .env.example .env          # add your ANTHROPIC_API_KEY (or use Ollama)
+make run TARGET=10.10.11.42
+</code></pre>
+<p>That is the whole setup. Everything else — Kali toolchain, wordlists, Python libraries — lives
+in the container.</p>
+<pre><code>╭───────────────────────────────────────────────────╮
+│  redloop  ·  autonomous offensive-security agent  │
+╰───────────────────────────────────────────────────╯
+target    10.10.11.42
+objective capture the flag
+model     anthropic · claude-sonnet-4-5
+limits    40 steps · 90 min
+run dir   runs/20261027-141503_10.10.11.42
+
+ STEP 7/40  04:12  ·  18.3k tok  ·  $0.041  ·  1 finding
+╭─ thinking ─────────────────────────────────────────────────────────────────╮
+│ The 302 to /admin/ only happens with a role cookie, and the response body │
+│ echoes my payload — that is textbook SQL injection in the login query.    │
+│ Instead of brute forcing credentials, I'll confirm it with a UNION and     │
+│ pull the users table directly.                                            │
+╰────────────────────────────────────────────────────────────────────────────╯
+  ▶ http  POST http://10.10.11.42/login.php  body=username=admin' UNION SELECT 1,2,3-- -
+╭─ output · 0.4s ────────────────────────────────────────────────────────────╮
+│ POST .../login.php -&gt; 200 OK (1462 bytes)                                  │
+│ set-cookie: role=admin; Path=/                                             │
+│ ───── BODY ─────                                                           │
+│ &lt;h1&gt;Admin panel&lt;/h1&gt; Welcome back, administrator.  id=1 login=admin ...    │
+╰────────────────────────────────────────────────────────────────────────────╯
+</code></pre>
+<hr />
+<h2 id="contents">Contents</h2>
+<ul>
+<li><a href="#why-it-is-different">Why it is different</a></li>
+<li><a href="#quick-start">Quick start</a></li>
+<li><a href="#choosing-a-model">Choosing a model</a></li>
+<li><a href="#command-line-reference">Command-line reference</a></li>
+<li><a href="#watching-it-work">Watching it work</a></li>
+<li><a href="#what-comes-out-of-a-run">What comes out of a run</a></li>
+<li><a href="#how-it-works">How it works</a></li>
+<li><a href="#ctf-playbook">CTF playbook</a></li>
+<li><a href="#scope-and-safety">Scope and safety</a></li>
+<li><a href="#troubleshooting">Troubleshooting</a></li>
+<li><a href="#development">Development</a></li>
+<li><a href="#legal">Legal</a></li>
+</ul>
+<hr />
+<h2 id="why-it-is-different">Why it is different</h2>
+<p>Most "AI pentest" projects are a thin loop around <code>nmap</code> that asks a model for a command and
+hops it will work. redloop is built for long autonomous runs against real targets:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>One action per turn, real observations</strong></td>
+<td>The model never sees fabricated tool output. Every step is executed, captured and fed back verbatim (truncated at the edges, full copy on disk).</td>
+</tr>
+<tr>
+<td><strong>Works with any model</strong></td>
+<td>Claude, GPT, or a local 7B model through Ollama. The protocol is plain JSON in a fenced block, and the parser tolerates the sloppy variants real models produce.</td>
+</tr>
+<tr>
+<td><strong>Survives its own context window</strong></td>
+<td>A durable scratchpad plus automatic fact extraction (ports, URLs, versions, credentials, hashes) means a 60-step run does not degrade into an amnesiac loop. History is compacted deterministically, not by hoping the model remembers.</td>
+</tr>
+<tr>
+<td><strong>Guardrails that actually fire</strong></td>
+<td>Scope enforcement on every host, IP and URL — including inside Python snippets — and a blocklist for commands that would destroy the container. Refusals are explained to the model so it adapts instead of retrying.</td>
+</tr>
+<tr>
+<td><strong>Anti-loop mechanics</strong></td>
+<td>Repeated actions are suppressed, unproductive streaks trigger a strategy nudge, and the run stops rather than burning your budget.</td>
+</tr>
+<tr>
+<td><strong>A report, not a log</strong></td>
+<td>Every run writes <code>report.md</code>, <code>results.json</code>, the full transcript, the raw loot and a replay of the feed.</td>
+</tr>
+<tr>
+<td><strong>Live, watchable, pipeable</strong></td>
+<td>Colour terminal feed with a spinner per action; <code>--plain</code> for logs; <code>--json-feed</code> for tooling.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="quick-start">Quick start</h2>
+<h3 id="requirements">Requirements</h3>
+<ul>
+<li>Docker (Engine 20.10+ or Docker Desktop) with the daemon running</li>
+<li>An API key for Claude, <strong>or</strong> Ollama for local models, <strong>or</strong> nothing at all to try the
+  bundled demo target</li>
+</ul>
+<h3 id="1-build">1. Build</h3>
+<pre><code class="language-bash">git clone &lt;this repo&gt; &amp;&amp; cd redloop
+make build
+</code></pre>
+<p>First build pulls the Kali base image and installs the toolchain — expect 5–10 minutes.
+For a much smaller image (nmap, curl, nc, gobuster, python only):</p>
+<pre><code class="language-bash">make build TOOLSET=slim
+</code></pre>
+<h3 id="2-configure">2. Configure</h3>
+<pre><code class="language-bash">cp .env.example .env
+$EDITOR .env        # set ANTHROPIC_API_KEY=sk-ant-...
+</code></pre>
+<h3 id="3-run">3. Run</h3>
+<pre><code class="language-bash">make run TARGET=10.10.11.42
+</code></pre>
+<p><code>make run</code> prints an authorisation notice and passes <code>--i-am-authorized</code> for you. To run the
+container directly:</p>
+<pre><code class="language-bash">docker run --rm -it --env-file .env -v &quot;$PWD/runs:/app/runs&quot; \
+  --add-host host.docker.internal:host-gateway \
+  --cap-add NET_RAW --cap-add NET_ADMIN \
+  redloop:latest --target 10.10.11.42 --i-am-authorized
+</code></pre>
+<h3 id="4-no-target-try-the-demo">4. No target? Try the demo</h3>
+<p>There is a deliberately vulnerable web app in <code>labs/web</code>. It has an SQL injection in the login
+form, an exposed config backup, an IDOR and a role-cookie bypass.</p>
+<pre><code class="language-bash">make demo          # builds the lab, then lets the agent solve it with the offline demo model
+</code></pre>
+<p>The demo uses <code>--provider mock</code>, a small rule-based model that needs no API key or GPU. It
+exists to prove the plumbing and to let you watch the interface; it is not an LLM. Swap in a
+real model with <code>make run TARGET=lab-web PROVIDER=ollama MODEL=qwen2.5-coder:14b</code>.</p>
+<hr />
+<h2 id="choosing-a-model">Choosing a model</h2>
+<h3 id="claude-recommended">Claude (recommended)</h3>
+<p>Best reasoning-per-step, which matters because every step costs a real action. Set in <code>.env</code>:</p>
+<pre><code class="language-bash">REDLOOP_PROVIDER=anthropic
+REDLOOP_MODEL=claude-sonnet-4-5
+ANTHROPIC_API_KEY=sk-ant-...
+</code></pre>
+<p>Override per run: <code>make run TARGET=... ARGS="--model claude-opus-4-1 --max-tokens 4096"</code>.</p>
+<p>Claude runs use prompt caching on the system prompt, which cuts the input cost of long runs
+substantially (the cache hit shows up in the run summary as <code>cached</code> tokens).</p>
+<h3 id="local-models-through-ollama">Local models through Ollama</h3>
+<pre><code class="language-bash"># on the host
+ollama serve
+ollama pull qwen2.5-coder:14b      # or llama3.1:8b, mistral-nemo, deepseek-coder-v2
+
+make run TARGET=10.10.11.42 PROVIDER=ollama MODEL=qwen2.5-coder:14b
+</code></pre>
+<p>Inside Docker, <code>localhost</code> is the container, so the agent maps <code>OLLAMA_HOST</code> to
+<code>host.docker.internal</code> automatically (<code>docker-compose.yml</code> and <code>make run</code> already add the host
+gateway). If you run the container by hand, include <code>--add-host host.docker.internal:host-gateway</code>.</p>
+<p>Fully containerised models:</p>
+<pre><code class="language-bash">docker compose --profile local up -d ollama     # publishes 11434 on the host
+make ollama-pull MODEL=qwen2.5-coder:14b
+make run TARGET=127.0.0.1 PROVIDER=ollama MODEL=qwen2.5-coder:14b
+</code></pre>
+<p>The published port means the agent still reaches Ollama through
+<code>host.docker.internal:11434</code>, so no extra configuration is needed.</p>
+<p>Local model notes:</p>
+<ul>
+<li>7B–14B models solve web and recon challenges reasonably; they get lost on multi-stage
+  binaries. Give them more steps and a smaller <code>--max-output-chars</code> (3000) to keep the context
+  clean.</li>
+<li>Set <code>REDLOOP_CONTEXT_WINDOW</code> to the real window (8192 or 32768). The agent compacts when it
+  approaches 55% of that, and a wrong value is the usual cause of "context exceeded" errors.</li>
+<li>Larger is not always better: a coder-tuned model that follows the JSON protocol beats a
+  70B general model that replies in prose.</li>
+</ul>
+<h3 id="everything-else">Everything else</h3>
+<p>Any endpoint that speaks <code>POST /v1/chat/completions</code> works:</p>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Flag</th>
+<th>Default endpoint</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Anthropic</td>
+<td><code>-p anthropic</code></td>
+<td><code>https://api.anthropic.com</code></td>
+</tr>
+<tr>
+<td>OpenAI</td>
+<td><code>-p openai</code></td>
+<td><code>https://api.openai.com/v1</code></td>
+</tr>
+<tr>
+<td>Ollama</td>
+<td><code>-p ollama</code></td>
+<td><code>http://localhost:11434/v1</code></td>
+</tr>
+<tr>
+<td>LM Studio</td>
+<td><code>-p lmstudio</code></td>
+<td><code>http://localhost:1234/v1</code></td>
+</tr>
+<tr>
+<td>OpenRouter</td>
+<td><code>-p openrouter</code></td>
+<td><code>https://openrouter.ai/api/v1</code></td>
+</tr>
+<tr>
+<td>Groq</td>
+<td><code>-p groq</code></td>
+<td><code>https://api.groq.com/openai/v1</code></td>
+</tr>
+<tr>
+<td>Anything else</td>
+<td><code>-p custom --base-url https://host/v1</code></td>
+<td>you supply it</td>
+</tr>
+<tr>
+<td>Offline demo</td>
+<td><code>-p mock</code></td>
+<td>none</td>
+</tr>
+</tbody>
+</table>
+<p>Credentials come from <code>ANTHROPIC_API_KEY</code>, <code>OPENAI_API_KEY</code>, <code>OPENROUTER_API_KEY</code>,
+<code>GROQ_API_KEY</code>, or <code>--api-key</code>. Check your setup before a real run:</p>
+<pre><code class="language-bash">make doctor        # toolchain, scope, endpoint reachability, and a real model round-trip
+</code></pre>
+<hr />
+<h2 id="command-line-reference">Command-line reference</h2>
+<pre><code>redloop --target &lt;ip|host|cidr|url&gt; [options]
+</code></pre>
+<h3 id="engagement">Engagement</h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-t, --target</code></td>
+<td>Target IP, hostname, CIDR or URL (a URL is reduced to its host)</td>
+</tr>
+<tr>
+<td><code>-o, --objective</code></td>
+<td>What success looks like. Default: capture any flag / assess the target</td>
+</tr>
+<tr>
+<td><code>-s, --scope</code></td>
+<td>Additional authorised hosts, CIDRs or <code>*.wildcards</code></td>
+</tr>
+<tr>
+<td><code>--seed-notes</code></td>
+<td>Context to hand the agent up front (credentials, hints, intended path)</td>
+</tr>
+<tr>
+<td><code>--flag-regex</code></td>
+<td>Extra regex for recognising flags (repeatable)</td>
+</tr>
+<tr>
+<td><code>--multi-flag</code></td>
+<td>Keep going after the first flag (challenges with several)</td>
+</tr>
+<tr>
+<td><code>--i-am-authorized</code></td>
+<td>Confirm authorisation (required for non-loopback targets)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="model">Model</h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-p, --provider</code></td>
+<td>Provider preset (see table above)</td>
+</tr>
+<tr>
+<td><code>-m, --model</code></td>
+<td>Model name</td>
+</tr>
+<tr>
+<td><code>--api-key</code></td>
+<td>Credential, instead of the environment</td>
+</tr>
+<tr>
+<td><code>--base-url</code></td>
+<td>Override the endpoint</td>
+</tr>
+<tr>
+<td><code>--temperature</code></td>
+<td>Sampling temperature (default 0.7)</td>
+</tr>
+<tr>
+<td><code>--max-tokens</code></td>
+<td>Max reply tokens per step (default 2048)</td>
+</tr>
+<tr>
+<td><code>--context-window</code></td>
+<td>Model context size; drives compaction</td>
+</tr>
+</tbody>
+</table>
+<h3 id="limits">Limits</h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--max-steps</code></td>
+<td>40</td>
+<td>Number of actions</td>
+</tr>
+<tr>
+<td><code>--max-minutes</code></td>
+<td>90</td>
+<td>Wall-clock budget</td>
+</tr>
+<tr>
+<td><code>--max-cost</code></td>
+<td>none</td>
+<td>Stop at this estimated API spend (USD)</td>
+</tr>
+<tr>
+<td><code>--command-timeout</code></td>
+<td>300</td>
+<td>Seconds before a single command is killed</td>
+</tr>
+<tr>
+<td><code>--max-output-chars</code></td>
+<td>6000</td>
+<td>How much of each output reaches the model</td>
+</tr>
+</tbody>
+</table>
+<h3 id="guardrails">Guardrails</h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--scope-check / --no-scope-check</code></td>
+<td>on</td>
+<td>Refuse actions against hosts outside scope</td>
+</tr>
+<tr>
+<td><code>--allow-private-networks / --no-...</code></td>
+<td>on</td>
+<td>Allow RFC1918 ranges (CTF pivots)</td>
+</tr>
+<tr>
+<td><code>--i-am-authorized</code></td>
+<td>off</td>
+<td>Authorisation acknowledgement</td>
+</tr>
+</tbody>
+</table>
+<h3 id="output">Output</h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--runs-dir</code></td>
+<td>Where run directories go (default <code>./runs</code>)</td>
+</tr>
+<tr>
+<td><code>--run-dir</code></td>
+<td>Write this run to a specific directory</td>
+</tr>
+<tr>
+<td><code>--resume DIR</code></td>
+<td>Continue an earlier run, restoring its scratchpad</td>
+</tr>
+<tr>
+<td><code>--plain</code></td>
+<td>Line-oriented, no colour (for <code>docker logs</code>, CI, grep)</td>
+</tr>
+<tr>
+<td><code>--json-feed</code></td>
+<td>One JSON object per event on stdout</td>
+</tr>
+<tr>
+<td><code>-v, --verbose</code></td>
+<td>Print full tool output</td>
+</tr>
+<tr>
+<td><code>-q, --quiet</code></td>
+<td>Only steps, actions and final results</td>
+</tr>
+<tr>
+<td><code>--no-color</code></td>
+<td>Disable colour but keep the layout</td>
+</tr>
+</tbody>
+</table>
+<h3 id="other">Other</h3>
+<p><code>--dry-run</code> (ask the model for one action, execute nothing), <code>--print-prompt</code> (dump the exact
+system prompt and brief), <code>--doctor [--check-model]</code>, <code>--list-tools</code>, <code>--env</code>, <code>--version</code>.</p>
+<p>Exit codes: <code>0</code> flag captured or completed · <code>1</code> error · <code>2</code> usage/configuration ·
+<code>3</code> a limit was reached (steps, time or cost) · <code>130</code> interrupted.</p>
+<h3 id="examples">Examples</h3>
+<pre><code class="language-bash"># a CTF box, more steps, a shell as the objective
+make run TARGET=10.10.11.42 ARGS=&quot;--max-steps 80 --objective 'get a shell and read /root/flag.txt'&quot;
+
+# web engagement with an API host in scope too
+make run TARGET=app.example.com ARGS=&quot;-s api.example.com other.example.com --max-cost 3&quot;
+
+# a challenge that hides the flag somewhere specific
+make run TARGET=10.10.11.42 ARGS=&quot;--seed-notes 'creds: admin:Summer2024  login /admin'&quot;
+
+# a binary exploitation challenge: point the model at the files
+make run TARGET=10.10.11.42 ARGS=&quot;--objective 'download /challenge, exploit it on port 31337'&quot;
+
+# watch the plan without touching anything
+make run TARGET=10.10.11.42 ARGS=&quot;--dry-run&quot;
+
+# pipe the feed into your own tooling
+make run TARGET=10.10.11.42 ARGS=&quot;--json-feed&quot; | jq -r 'select(.event==&quot;action&quot;) | .preview'
+
+# continue yesterday's run
+redloop --resume runs/20261026-183012_10.10.11.42 --i-am-authorized
+</code></pre>
+<hr />
+<h2 id="watching-it-work">Watching it work</h2>
+<p>The feed is the point: you see the model's reasoning, the exact action, and the output it
+reacted to.</p>
+<ul>
+<li><strong>Rich mode</strong> (default on a TTY): panels for thinking, a spinner while a long tool runs,
+  findings highlighted as they are recorded, a banner the moment a flag appears.</li>
+<li><strong><code>--plain</code></strong>: timestamped lines, no ANSI — what lands in <code>feed.txt</code> and <code>docker logs</code>.</li>
+<li><strong><code>--json-feed</code></strong>: every event as JSON, for <code>jq</code>, dashboards or your own UI. Events are
+  <code>session_start</code>, <code>step_start</code>, <code>thought</code>, <code>action</code>, <code>observation</code>, <code>finding</code>, <code>flag</code>,
+  <code>blocked</code>, <code>warning</code>, <code>error</code>, <code>retrying</code>, <code>compaction</code>, <code>session_end</code>.</li>
+<li><strong><code>--quiet</code></strong> for a summary-only run; <strong><code>--verbose</code></strong> to read every line of output.</li>
+</ul>
+<p>Press <code>Ctrl-C</code> at any time: the agent stops, writes the report and exits <code>130</code>.</p>
+<hr />
+<h2 id="what-comes-out-of-a-run">What comes out of a run</h2>
+<pre><code>runs/20261027-141503_10.10.11.42/
+├── report.md          # the deliverable: summary, findings, evidence, actions, reproduction
+├── results.json       # the same, machine readable
+├── transcript.jsonl   # every event, timestamped
+├── feed.txt           # exactly what the terminal showed
+├── memory.json        # scratchpad state (used by --resume)
+├── notes.md           # notes and findings in markdown
+├── work/              # scripts the agent wrote and executed
+└── loot/              # full command output, HTTP bodies, captured files
+</code></pre>
+<p>The report opens with an executive summary and a findings table, then per-finding details with
+the captured evidence, the attack surface it mapped, a numbered log of every action, and the
+command line to reproduce the run.</p>
+<hr />
+<h2 id="how-it-works">How it works</h2>
+<pre><code>        ┌────────────────────────────────────────────────────────────┐
+        │  brief + state (facts, notes, findings, recent actions)     │
+        └───────────────────────────┬────────────────────────────────┘
+                                    ▼
+                    ┌──────────────────────────────┐
+                    │  model (Claude/Ollama/...)   │
+                    │   prose + one JSON action    │
+                    └───────────────┬──────────────┘
+                                    ▼
+                    ┌──────────────────────────────┐
+      refusal ◄─────┤  guardrails: scope, blast    │
+                    │  radius, repeat detection    │
+                    └───────────────┬──────────────┘
+                                    ▼
+        ┌───────────────────────────────────────────────────────────┐
+        │ tools: shell · python · http · files · notes · findings   │
+        └───────────────┬───────────────────────────────┬───────────┘
+                        ▼                               ▼
+              ┌──────────────────┐            ┌──────────────────┐
+              │ observation      │            │ events: feed,     │
+              │ (+fact scraping) │            │ transcript, report│
+              └──────────────────┘            └──────────────────┘
+</code></pre>
+<p>The loop asks for exactly one action per turn, executes it, and returns the observation with a
+fresh state block. That single-action discipline is what makes the transcript reviewable and
+the guardrails enforceable.</p>
+<p><strong>Tools</strong> (10, documented to the model in the system prompt):</p>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>shell</code></td>
+<td>Any command in the container — nmap, curl, gobuster, sqlmap, hydra, nc, openssl</td>
+</tr>
+<tr>
+<td><code>python</code></td>
+<td>Run a snippet: socket exploits, crypto, parsing, pwntools</td>
+</tr>
+<tr>
+<td><code>http</code></td>
+<td>HTTP client with methods, headers, bodies, redirects, cookie handling</td>
+</tr>
+<tr>
+<td><code>read_file</code> / <code>write_file</code> / <code>list_dir</code></td>
+<td>Challenge files, exploit scripts, loot</td>
+</tr>
+<tr>
+<td><code>note_add</code></td>
+<td>Durable scratchpad that survives compaction</td>
+</tr>
+<tr>
+<td><code>record_finding</code></td>
+<td>Structured finding with severity, evidence, remediation</td>
+</tr>
+<tr>
+<td><code>submit_flag</code> / <code>give_up</code></td>
+<td>Declare success, or stop cleanly</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Context management.</strong> Facts are scraped from every observation (ports and versions, URLs,
+HTML comments, emails, hashes, credentials). When the estimated prompt exceeds ~55% of the
+model's window, the middle of the conversation is replaced with a deterministic summary built
+from that scratchpad — no extra model call, no information loss that matters.</p>
+<p><strong>Anti-loop mechanics.</strong> Identical actions are suppressed after two attempts with an explanation
+of what changed since; three unproductive steps add an explicit "change tactic" instruction to
+the state block; eight end the run as <code>exhausted</code> rather than spending your budget.</p>
+<p>More detail, including the exact prompt structure, lives in <a href="architecture.html">docs/architecture.md</a>.</p>
+<hr />
+<h2 id="ctf-playbook">CTF playbook</h2>
+<p>The system prompt carries category-specific tradecraft; the image carries the tools. What that
+means in practice:</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>What the agent reaches for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Web</strong></td>
+<td>Header/JS/source review first, then robots/sitemap/backup/<code>.git</code>; gobuster/ffuf for paths and parameters; SQLi (manual, then sqlmap), LFI, SSTI, XXE, SSRF, command injection, JWT <code>alg:none</code>, IDOR, upload filters, default creds</td>
+</tr>
+<tr>
+<td><strong>Pwn</strong></td>
+<td><code>file</code>, <code>checksec</code>, <code>strings</code>, <code>readelf</code>, <code>objdump</code>, <code>r2</code>/<code>gdb</code>; pwntools for remote interaction; ret2win, format strings, ret2libc, shellcode; reads <code>/flag.txt</code> once it has execution</td>
+</tr>
+<tr>
+<td><strong>Crypto</strong></td>
+<td>Identifies the scheme first (openssl, python), then attacks the weakness — small <code>e</code>, shared modulus, Wiener, XOR/repeating key, predictable RNG, classical ciphers, hash length extension — with sympy/z3 for the algebra</td>
+</tr>
+<tr>
+<td><strong>Forensics / stego</strong></td>
+<td><code>file</code>, <code>exiftool</code>, <code>strings</code>, <code>binwalk -e</code>, <code>foremost</code>, <code>pngcheck</code>, <code>zsteg</code>/<code>steghide</code>, <code>tshark</code> for pcaps, john/hashcat for hashes</td>
+</tr>
+<tr>
+<td><strong>Reversing</strong></td>
+<td><code>objdump -d</code>, radare2, gdb, python/Java/.NET decompilation; derives the key or the accepted input from the check logic</td>
+</tr>
+<tr>
+<td><strong>Priv-esc / AD</strong></td>
+<td><code>sudo -l</code>, SUID/SGID, capabilities, cron, writable services, kernel versions, credential reuse, smbclient/enum4linux/ldapsearch</td>
+</tr>
+</tbody>
+</table>
+<p>Give it the objective and the files, not the method:</p>
+<pre><code class="language-bash">make run TARGET=10.10.11.42 ARGS=&quot;--objective 'the download endpoint serves a binary; exploit it remotely and read /flag.txt'&quot;
+</code></pre>
+<p>If a challenge needs a file you have locally, mount it into the container and mention the path
+in <code>--seed-notes</code>.</p>
+<hr />
+<h2 id="scope-and-safety">Scope and safety</h2>
+<p>This tool sends real exploits at real machines. Built-in guardrails:</p>
+<ol>
+<li><strong>Authorisation gate.</strong> A non-loopback target requires <code>--i-am-authorized</code> (or
+   <code>REDLOOP_AUTHORIZED=1</code>). Without it the run refuses to start.</li>
+<li><strong>Scope enforcement.</strong> Every command, URL and Python snippet is scanned for destinations.
+   The target and <code>--scope</code> entries are in bounds; private ranges are allowed by default (CTF
+   boxes pivot into internal networks, and the agent's own tooling is on loopback); arbitrary
+   public hosts are refused. A refusal is fed back to the model with instructions to adapt.</li>
+<li><strong>Blast-radius protection.</strong> <code>mkfs</code>, <code>dd of=/dev/sda</code>, <code>rm -rf /</code>, fork bombs, shutting down
+   the host and similar commands are blocked outright — they are never needed to solve a
+   challenge and are usually a model hallucination.</li>
+<li><strong>Bounded execution.</strong> Every command has a timeout, output is capped at 2 MB per action
+   (with the head and tail shown), and the whole run is bounded by steps, wall clock and
+   optionally cost.</li>
+<li><strong>Complete audit trail.</strong> Every action, refusal and observation is written to the run
+   directory.</li>
+</ol>
+<p>What it is <strong>not</strong>: a safe sandbox for untrusted code (the container is the boundary — the agent
+runs as root because real tooling needs it), a substitute for a human tester's judgement, or a
+licence to scan the internet. Do not add <code>--privileged</code>, and do not mount your home directory
+into it while pointing it at a hostile target.</p>
+<p>Limitations worth knowing:</p>
+<ul>
+<li>Findings are the agent's observations. Verify before you disclose or remediate.</li>
+<li>The agent will not invent a path it cannot see: a challenge that needs a specific tool not in
+  the image needs <code>make shell</code> and a package install, or an image rebuild.</li>
+<li>Long, noisy scans (<code>-p-</code> on a filtered host) eat steps. Bounded scans with <code>--min-rate</code> are
+  usually better, and the prompt says so.</li>
+<li>Very small local models produce malformed actions; the parser recovers, but a 3B model is
+  going to be slow and shallow. Start at 14B for autonomous work.</li>
+</ul>
+<hr />
+<h2 id="troubleshooting">Troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Cause and fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ANTHROPIC_API_KEY is not set</code></td>
+<td>Put it in <code>.env</code> (copy <code>.env.example</code>), export it, or pass <code>--api-key</code></td>
+</tr>
+<tr>
+<td><code>401 ... invalid x-api-key</code></td>
+<td>Wrong or revoked key; check <code>make doctor</code></td>
+</tr>
+<tr>
+<td><code>! Docker is not installed</code></td>
+<td>Install Docker, or run locally: <code>make venv &amp;&amp; source .venv/bin/activate</code></td>
+</tr>
+<tr>
+<td><code>model call failed: HTTP 404</code></td>
+<td>Wrong <code>--base-url</code> (usually needs <code>/v1</code>) or the model is not pulled</td>
+</tr>
+<tr>
+<td>Ollama unreachable inside Docker</td>
+<td>Add <code>--add-host host.docker.internal:host-gateway</code>, and make sure Ollama listens on <code>0.0.0.0</code> (<code>OLLAMA_HOST=0.0.0.0 ollama serve</code>)</td>
+</tr>
+<tr>
+<td><code>context length exceeded</code></td>
+<td>Set <code>--context-window</code> to the model's real window, or lower <code>--max-output-chars</code></td>
+</tr>
+<tr>
+<td>Every scan says "filtered"</td>
+<td>Missing capabilities: add <code>--cap-add NET_RAW --cap-add NET_ADMIN</code></td>
+</tr>
+<tr>
+<td>Agent loops on the same idea</td>
+<td>Increase <code>--max-steps</code>, give <code>--seed-notes</code> with a hint, or use a stronger model</td>
+</tr>
+<tr>
+<td><code>NET_ADMIN is not granted</code> on start</td>
+<td>Same as above; nmap falls back to connect scans without it</td>
+</tr>
+<tr>
+<td>Colours look wrong in CI</td>
+<td><code>--plain</code> or <code>--json-feed</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>make doctor</code> checks all of this in one shot, including a real round-trip to the model.</p>
+<hr />
+<h2 id="development">Development</h2>
+<pre><code class="language-bash">make venv                 # local virtualenv with dev dependencies
+source .venv/bin/activate
+redloop --help
+make test                 # 226 tests, no network required
+make lint                 # ruff
+make site                 # rebuild the docs website in docs/ (GitHub Pages)
+</code></pre>
+<p>Layout:</p>
+<pre><code>redloop/
+├── cli.py            argument parsing, wiring, exit codes
+├── agent.py          the loop, limits, compaction, reporting hooks
+├── protocol.py       tolerant action parser (JSON/XML/dicts/shell fences)
+├── prompts.py        system prompt, brief, state block, nudges
+├── context.py        token accounting and deterministic compaction
+├── memory.py         scratchpad, fact extraction, flag detection
+├── safety.py         scope guard and blast-radius blocklist
+├── render.py         rich / plain / JSON renderers
+├── report.py         report.md and results.json
+├── transcript.py     transcript.jsonl and feed.txt
+├── doctor.py         environment checks
+├── llm/              anthropic, openai-compatible, retry, mock
+└── tools/            shell, python, http, files, notes, findings, control
+labs/web/             deliberately vulnerable practice target
+tests/                226 tests covering the parser, guardrails, tools, loop and CLI
+</code></pre>
+<p>Adding a tool: subclass <code>Tool</code> in <code>redloop/tools/</code>, declare <code>name</code>, <code>summary</code>, <code>args</code> and
+<code>required</code>, implement <code>async def run(args, ctx)</code>, then register it in
+<code>redloop/tools/__init__.py</code>. The prompt, CLI help and parser aliases pick it up automatically.</p>
+<hr />
+<h2 id="contributing">Contributing</h2>
+<p>Issues and pull requests are welcome — see <a href="https://github.com/usa3492max/gpt/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md</a> for setup, what is
+easy to add (a tool is one class; a provider is two methods) and what to be careful about.</p>
+<p><code>make test</code> and <code>make lint</code> need no Docker, no API key and no network access, so the feedback loop
+is fast.</p>
+<ul>
+<li><strong>Found a guardrail bypass?</strong> Do not open a public issue — follow <a href="https://github.com/usa3492max/gpt/blob/main/SECURITY.md" target="_blank" rel="noopener">SECURITY.md</a>.
+  Scope escapes, blocklist bypasses, path escapes and credential leaks are treated as urgent.</li>
+<li><strong>Being a decent human:</strong> <a href="https://github.com/usa3492max/gpt/blob/main/CODE_OF_CONDUCT.md" target="_blank" rel="noopener">CODE_OF_CONDUCT.md</a>. In short: do not use this
+  tool on systems you have not been authorised to test.</li>
+</ul>
+<p>The docs website in <code>docs/</code> is generated from this README and <code>docs/*.md</code> by <code>docs/build_site.py</code>
+(<code>make site</code>), so the published pages cannot drift from the source.</p>
+<h2 id="legal">Legal</h2>
+<p>redloop is for authorised security testing only — systems you own, or systems you have explicit
+written permission to test. Unauthorised access to computer systems is a criminal offence in
+most jurisdictions. You are responsible for what you point it at. The authors accept no
+liability for misuse or damage.</p>
+<p>MIT licensed. See <a href="https://github.com/usa3492max/gpt/blob/main/LICENSE" target="_blank" rel="noopener">LICENSE</a>.</p>
+</article>
+
+</main>
+<footer class="footer">
+  <p>Generated from the repository's own markdown — it cannot drift from the source.</p>
+  <p class="muted">
+    v0.1.0 · MIT licensed ·
+    <a href="https://github.com/usa3492max/gpt" target="_blank" rel="noopener">source</a> ·
+    <a href="https://github.com/usa3492max/gpt/releases/tag/v0.1.0" target="_blank" rel="noopener">release</a> ·
+    <a href="changelog.html">changelog</a>
+  </p>
+  <p class="disclaimer">
+    For authorised security testing only: systems you own, or systems you have explicit written
+    permission to test. Unauthorised access to computer systems is a criminal offence in most
+    jurisdictions. You are responsible for what you point it at.
+  </p>
+</footer>
+</body>
+</html>

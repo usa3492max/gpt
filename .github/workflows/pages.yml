@@ -1,0 +1,110 @@
+name: pages
+
+# Publishes the documentation site in docs/ to GitHub Pages.
+#
+# The site is generated from the repository's markdown by `make site`, so this
+# workflow only has to upload what is already committed.
+#
+# GitHub Pages has to be switched on once for the repository, and that needs
+# repository-admin rights that the workflow token does not have. Rather than fail
+# red on every push until someone clicks the button, this workflow probes for the
+# setting and, when it is off, writes the exact instructions to the job summary
+# and finishes successfully. Once Pages is enabled with the "GitHub Actions"
+# source, subsequent pushes deploy automatically.
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "docs/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    name: check Pages availability
+    runs-on: ubuntu-latest
+    outputs:
+      deploy: ${{ steps.probe.outputs.deploy }}
+    steps:
+      - name: Probe the Pages configuration
+        id: probe
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          code=$(curl -s -o /tmp/pages.json -w '%{http_code}' \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "${{ github.api_url }}/repos/${{ github.repository }}/pages" || true)
+          build_type=""
+          if [ "$code" = "200" ]; then
+            build_type=$(python3 -c "import json;print(json.load(open('/tmp/pages.json')).get('build_type',''))")
+          fi
+          echo "Pages API HTTP $code, build_type=${build_type:-none}"
+
+          if [ "$build_type" = "workflow" ]; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+            echo "Pages is enabled with the GitHub Actions source; deploying."
+            exit 0
+          fi
+
+          echo "deploy=false" >> "$GITHUB_OUTPUT"
+          {
+            echo "### GitHub Pages is not enabled for this repository"
+            echo ""
+            echo "The site is built and committed in \`docs/\` — it just needs to be switched on once."
+            echo ""
+            echo "**Enable it (30 seconds):** open **Settings → Pages** for this repository and set"
+            echo "**Source** to **GitHub Actions**. This workflow then deploys automatically."
+            echo ""
+            echo "Prefer a branch source? Choose **Deploy from a branch**, branch \`${{ github.ref_name }}\`,"
+            echo "folder \`/docs\`. No workflow needed in that case; the workflow will stand down."
+            echo ""
+            echo "The site then appears at https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice title=Pages not enabled::Enable Pages in Settings → Pages (Source: GitHub Actions). See the job summary."
+
+  build:
+    name: build site
+    needs: probe
+    if: needs.probe.outputs.deploy == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Check the site source is present
+        run: |
+          test -f docs/index.html || { echo "docs/index.html is missing — run 'make site'"; exit 1; }
+          test -f docs/assets/style.css || { echo "docs/assets/style.css is missing"; exit 1; }
+          find docs -type f | sort
+
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+  deploy:
+    name: deploy
+    needs: [probe, build]
+    if: needs.probe.outputs.deploy == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

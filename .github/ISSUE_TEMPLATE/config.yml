@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability in redloop
+    url: https://github.com/usa3492max/gpt/security/advisories/new
+    about: Report guardrail bypasses, scope escapes and credential leaks privately — not as a public issue.
+  - name: Documentation
+    url: https://github.com/usa3492max/gpt/blob/main/README.md
+    about: Install steps, every command-line flag, provider setup and troubleshooting.
+  - name: Architecture notes
+    url: https://github.com/usa3492max/gpt/blob/main/docs/architecture.md
+    about: How the loop, the action protocol, compaction and the guardrails fit together.

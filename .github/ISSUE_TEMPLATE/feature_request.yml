@@ -1,0 +1,58 @@
+name: Feature request
+description: Suggest a capability, a tool, a provider or a change to how the agent reasons
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Two things are out of scope on purpose and will be declined: making the agent stealthier or
+        harder to detect, and anything that weakens the scope guardrails. Everything else is fair
+        game — especially things that make the agent *better at deciding what to do next*.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve
+      description: Describe the situation where the current behaviour falls short.
+      placeholder: |
+        On a blind SQL injection the agent retries variants of the same payload instead of
+        switching to time-based blind, and burns six steps.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like to happen
+      description: Be as concrete as you can — a tool, a prompt change, a config flag?
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - The agent loop / decision making
+        - The action protocol or a provider
+        - A tool (shell, python, http, files, notes)
+        - Guardrails and safety
+        - The live feed / rendering
+        - Reporting
+        - Docker, packaging, Makefile
+        - Documentation and the website
+        - CTF category support (web, pwn, crypto, forensics, reversing, AD)
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Including "I do this by hand with --seed-notes today", if that is the case.
+
+  - type: checkboxes
+    id: scope-check
+    attributes:
+      label: Scope check
+      options:
+        - label: This is for authorised testing, not for attacking systems without consent
+          required: true
