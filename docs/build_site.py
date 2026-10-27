@@ -32,7 +32,7 @@ except ImportError:  # pragma: no cover
 
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"
-SITE_URL = "https://usa3492max.github.io/gpt/"
+SITE_URL = "https://panther-gpt.vercel.app/"
 REPO_URL = "https://github.com/usa3492max/gpt"
 RELEASE_URL = f"{REPO_URL}/releases/tag/v0.1.0"
 VERSION = "0.1.0"
@@ -128,7 +128,7 @@ def _feed_preview() -> str:
                     "set-cookie: role=admin; Path=/",
                     "----- BODY -----",
                     "<h1>Admin panel</h1> Welcome back, administrator.",
-                    "Flag: <code>flag{r3dl00p_l4b_sql1_byp4ss}</code>",
+                    "Flag: flag{r3dl00p_l4b_sql1_byp4ss}",
                 ],
             ),
         ]
@@ -182,6 +182,11 @@ MODELS = [
     ("Anything else", "`-p custom --base-url`", "your model", "Any /v1/chat/completions endpoint."),
     ("Offline demo", "`-p mock`", "mock-rulebased", "No key, no GPU. Exercises the loop."),
 ]
+
+def _plain_flag(flag: str) -> str:
+    """Strip the markdown backticks carried by the table data."""
+    return flag.strip("`")
+
 
 CATEGORIES = [
     ("Web", "Headers and source first, then robots/backup/.git; gobuster and ffuf for paths and "
@@ -253,7 +258,7 @@ def _rewrite_links(body: str) -> str:
         r'<a href="(https?://[^"]+)"',
         lambda m: (
             m.group(0)
-            if "usa3492max.github.io" in m.group(1)
+            if SITE_URL.rstrip("/") in m.group(1)
             else f'<a href="{m.group(1)}" target="_blank" rel="noopener"'
         ),
         body,
@@ -364,7 +369,7 @@ def landing() -> str:
         for name, text in FEATURES
     )
     model_rows = "".join(
-        f"<tr><td>{html.escape(name)}</td><td><code>{html.escape(flag)}</code></td>"
+        f"<tr><td>{html.escape(name)}</td><td><code>{html.escape(_plain_flag(flag))}</code></td>"
         f"<td><code>{html.escape(default)}</code></td><td>{html.escape(note)}</td></tr>"
         for name, flag, default, note in MODELS
     )
